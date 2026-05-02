@@ -1,0 +1,114 @@
+// This is your Prisma schema file
+// Run: npx prisma migrate dev --name init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum Role {
+  JOB_SEEKER
+  EMPLOYER
+  ADMIN
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWED
+  SHORTLISTED
+  REJECTED
+  HIRED
+}
+
+// ─────────────────────────────────────────────
+// MODELS
+// ─────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(JOB_SEEKER)
+  resumeUrl    String?  // S3 object URL
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  jobs         Job[]          // Employer posts jobs
+  applications Application[]  // Seeker applies to jobs
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model Job {
+  id          String   @id @default(uuid())
+  title       String
+  description String   @db.Text
+  skills      String[] // e.g. ["React", "Node.js"]
+  location    String
+  salaryMin   Int?
+  salaryMax   Int?
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  employerId  String
+  employer    User         @relation(fields: [employerId], references: [id], onDelete: Cascade)
+  applications Application[]
+
+  @@index([isActive, createdAt(sort: Desc)]) // Optimized for job listing queries
+  @@map("jobs")
+}
+
+model Application {
+  id          String            @id @default(uuid())
+  status      ApplicationStatus @default(PENDING)
+  matchScore  Float?            // AI-generated 0–100
+  coverLetter String?           @db.Text
+  resumeUrl   String?           // Snapshot of resume at time of apply
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  jobId       String
+  job         Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  applicantId String
+  applicant   User @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, applicantId]) // One application per job per user — DB-level enforcement
+  @@index([applicantId])
+  @@index([jobId, status])
+  @@map("applications")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  type      String   // "APPLICATION_UPDATE" | "NEW_JOB_MATCH" | "SHORTLISTED"
+  message   String
+  isRead    Boolean  @default(false)
+  metadata  Json?    // e.g. { jobId, applicationId } — flexible payload
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  userId    String
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
