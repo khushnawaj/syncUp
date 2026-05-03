@@ -2,13 +2,17 @@ const prisma = require('../config/db');
 const ApiError = require('../utils/ApiError');
 const ai = require('../config/ai');
 const { getRedisClient } = require('../config/redis');
+const { PutObjectCommand } = require('@aws-sdk/client-s3');
+const { s3Client } = require('../config/s3');
+const pdfParse = require('pdf-parse');
+const { v4: uuidv4 } = require('uuid');
 
 const redis = getRedisClient();
 
 /**
  * Score a resume against a job description.
- * Strategy: Try Gemini AI first. If it fails (no credits/keys), 
- * fall back to a keyword-overlap algorithm to ensure the app remains functional for demos.
+ * Strategy: Try Groq AI (Llama 3.3) first. If it fails, 
+ * fall back to a keyword-overlap algorithm for resilience.
  */
 const computeMatchScore = async (jobDescription, resumeText) => {
   // 1. Attempt Groq AI Matching
@@ -72,42 +76,66 @@ const computeMatchScore = async (jobDescription, resumeText) => {
   }
 };
 
-const applyToJob = async ({ jobId, applicantId, coverLetter, resumeText, getIO }) => {
-  // Verify job exists and is active
+const applyToJob = async ({ jobId, applicantId, coverLetter, resumeText, file, getIO }) => {
+  // 1. Verify job exists and is active
   const job = await prisma.job.findUnique({ where: { id: jobId } });
   if (!job) throw ApiError.notFound('Job not found');
   if (!job.isActive) throw ApiError.badRequest('This job is no longer accepting applications');
   if (job.employerId === applicantId) throw ApiError.badRequest('You cannot apply to your own job');
 
-  // Check duplicate — DB also enforces @@unique but we give a friendlier message here
+  // 2. Check duplicate
   const existing = await prisma.application.findUnique({
     where: { jobId_applicantId: { jobId, applicantId } },
   });
   if (existing) throw ApiError.conflict('You have already applied to this job');
 
-  // Get applicant for resume snapshot
-  const applicant = await prisma.user.findUnique({
-    where: { id: applicantId },
-    select: { resumeUrl: true },
-  });
+  let finalResumeUrl = '';
+  let extractedText = resumeText || '';
 
-  // Create application with PENDING status
+  // 3. Handle File Upload (S3) & Text Extraction (pdf-parse)
+  if (file) {
+    const fileExtension = file.originalname.split('.').pop();
+    const fileName = `resumes/${uuidv4()}.${fileExtension}`;
+    
+    try {
+      // Upload to S3
+      await s3Client.send(new PutObjectCommand({
+        Bucket: process.env.AWS_S3_BUCKET,
+        Key: fileName,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      }));
+      finalResumeUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`;
+
+      // Extract text for AI if it's a PDF
+      if (file.mimetype === 'application/pdf') {
+        const pdfData = await pdfParse(file.buffer);
+        extractedText = pdfData.text;
+      } else if (file.mimetype === 'text/plain') {
+        extractedText = file.buffer.toString('utf-8');
+      }
+    } catch (err) {
+      console.error('S3/Extraction Error:', err.message);
+    }
+  }
+
+  // 4. Create application
   const application = await prisma.application.create({
     data: {
       jobId,
       applicantId,
       coverLetter,
-      resumeUrl: applicant.resumeUrl,
+      resumeUrl: finalResumeUrl || null,
       status: 'PENDING',
     },
-    include: { job: { select: { title: true, employerId: true } } },
+    include: { job: { select: { title: true, employerId: true, description: true } } },
   });
 
-  // Fire-and-forget AI scoring — don't block the response
-  if (resumeText) {
+  // 5. Fire-and-forget AI scoring
+  if (extractedText) {
     setImmediate(async () => {
       try {
-        const score = await computeMatchScore(job.description, resumeText);
+        const score = await computeMatchScore(job.description, extractedText);
         await prisma.application.update({
           where: { id: application.id },
           data: { matchScore: score },
@@ -118,7 +146,7 @@ const applyToJob = async ({ jobId, applicantId, coverLetter, resumeText, getIO }
         if (io) {
           io.to(`user:${job.employerId}`).emit('notification:new', {
             type: 'NEW_APPLICATION',
-            message: `New application for "${job.title}" — Match Score: ${score}`,
+            message: `New application for "${job.title}" — Match Score: ${score}%`,
             metadata: { applicationId: application.id, jobId, score },
           });
         }

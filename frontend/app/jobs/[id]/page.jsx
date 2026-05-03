@@ -18,6 +18,7 @@ export default function JobDetailPage() {
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [coverLetter, setCoverLetter] = useState('');
+  const [resumeFile, setResumeFile] = useState(null);
   const [resumeText, setResumeText] = useState('');
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
@@ -34,10 +35,22 @@ export default function JobDetailPage() {
     if (!isAuthenticated) { router.push('/login'); return; }
     setApplying(true);
     try {
-      await api.post(`/applications/jobs/${id}/apply`, { coverLetter, resumeText });
+      // Use FormData for file upload
+      const formData = new FormData();
+      formData.append('coverLetter', coverLetter);
+      if (resumeFile) {
+        formData.append('resume', resumeFile);
+      } else {
+        formData.append('resumeText', resumeText);
+      }
+
+      await api.post(`/applications/jobs/${id}/apply`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
       setApplied(true);
       setShowApply(false);
-      toast.success('Application submitted! AI scoring in progress…');
+      toast.success('Application submitted! AI matching complete.');
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Application failed');
     } finally {
@@ -138,16 +151,34 @@ export default function JobDetailPage() {
             <h3 className="font-semibold text-sm mb-4">Your Application</h3>
             <div className="mb-4">
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Paste Resume Text <span className="text-violet-600">(Triggers AI Matching)</span>
+                Upload Resume <span className="text-violet-600">(PDF or DOCX)</span>
               </label>
-              <textarea
-                value={resumeText}
-                onChange={(e) => setResumeText(e.target.value)}
-                rows={4}
-                placeholder="Paste your resume text here to test the Azure OpenAI matching score..."
-                className="input-field resize-none mb-4"
-              />
-              
+              <div className="relative group">
+                <input
+                  type="file"
+                  onChange={(e) => setResumeFile(e.target.files[0])}
+                  accept=".pdf,.doc,.docx,.txt"
+                  className="hidden"
+                  id="resume-upload"
+                />
+                <label
+                  htmlFor="resume-upload"
+                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-violet-200 rounded-xl hover:border-violet-500 hover:bg-violet-50/50 transition-all cursor-pointer"
+                >
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                      <Send size={18} className="text-violet-600 -rotate-45" />
+                    </div>
+                    <p className="text-sm text-slate-600">
+                      {resumeFile ? <span className="font-semibold text-violet-700">{resumeFile.name}</span> : "Click to upload or drag and drop"}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1">AI will match your skills automatically</p>
+                  </div>
+                </label>
+              </div>
+            </div>
+            
+            <div className="mb-4">
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Cover Letter <span className="text-slate-500">(optional)</span>
               </label>
@@ -162,8 +193,21 @@ export default function JobDetailPage() {
               />
             </div>
             <div className="flex gap-3">
-              <button onClick={handleApply} disabled={applying} className="btn-primary flex items-center gap-2">
-                <Send size={14} /> {applying ? 'Submitting…' : 'Submit Application'}
+              <button 
+                onClick={handleApply} 
+                disabled={applying || !resumeFile} 
+                className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {applying ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-slate-900/30 border-t-slate-900 rounded-full animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Send size={14} /> Submit Application
+                  </>
+                )}
               </button>
               <button
                 onClick={() => setShowApply(false)}

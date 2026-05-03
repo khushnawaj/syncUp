@@ -12,7 +12,8 @@ const applyToJob = asyncHandler(async (req, res) => {
     jobId: req.params.jobId,
     applicantId: req.user.id,
     coverLetter,
-    resumeText, // Optional: extracted resume text for AI scoring
+    resumeText,
+    file: req.file, // Passed from multer
     getIO: _getIO,
   });
   res.status(201).json(new ApiResponse(201, application, 'Application submitted'));
