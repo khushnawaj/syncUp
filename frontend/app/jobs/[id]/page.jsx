@@ -100,7 +100,15 @@ export default function JobDetailPage() {
               <h1 className="text-sm font-bold mb-1">{job.title}</h1>
               <p className="text-slate-500 text-sm">{job.employer.name}</p>
             </div>
-            <div className="shrink-0">
+            <div className="shrink-0 flex gap-2">
+              {isOwnJob && (
+                <Link
+                  href={`/dashboard/jobs/${job.id}/applications`}
+                  className="px-4 py-2 rounded-xl bg-violet-100 text-violet-700 text-sm font-semibold hover:bg-violet-200 transition-all flex items-center gap-2"
+                >
+                  <Users size={16} /> View Applications
+                </Link>
+              )}
               {applied ? (
                 <span className="badge badge-green px-3 py-1.5">✓ Applied</span>
               ) : canApply ? (
