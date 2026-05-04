@@ -26,7 +26,6 @@ const getPresignedUploadUrl = async (userId, fileType) => {
     Bucket: BUCKET,
     Key: key,
     ContentType: fileType,
-    Metadata: { userId },
   });
 
   const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 }); // 5 min
