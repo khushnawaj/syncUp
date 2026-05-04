@@ -10,7 +10,7 @@ A scalable, production-ready job matching platform built as a technical assignme
 - **Real-time**: Socket.io (Real-time notifications)
 - **AI Matching**: Groq / Llama 3 (OpenAI-compatible) for resume scoring
 - **Storage**: AWS S3 (Resume uploads)
-- **Deployment**: AWS EC2 (Backend), Vercel (Frontend)
+- **Deployment**: Render (Backend), Vercel (Frontend)
 
 ## ✨ Key Features
 1. **User Authentication**: Secure JWT-based authentication for Employers and Job Seekers.
@@ -53,7 +53,7 @@ A scalable, production-ready job matching platform built as a technical assignme
    ```
 
 ## ☁️ Deployment Strategy
-- **Backend**: Containerized with **Docker** and deployed on **AWS EC2**.
+- **Backend**: Deployed on **Render** for seamless auto-deployments and high availability.
 - **Database**: Hosted on **Neon/RDS** for high availability.
 - **Cache**: **Upstash Redis** for low-latency job lookups.
 - **Frontend**: **Vercel** for optimal Next.js performance.

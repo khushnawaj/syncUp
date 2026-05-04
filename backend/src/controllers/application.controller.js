@@ -7,13 +7,13 @@ let _getIO = () => null;
 const setGetIO = (fn) => { _getIO = fn; };
 
 const applyToJob = asyncHandler(async (req, res) => {
-  const { coverLetter, resumeText } = req.body;
+  const { coverLetter, resumeText, resumeUrl } = req.body;
   const application = await applicationService.applyToJob({
     jobId: req.params.jobId,
     applicantId: req.user.id,
     coverLetter,
     resumeText,
-    file: req.file, // Passed from multer
+    resumeUrl,
     getIO: _getIO,
   });
   res.status(201).json(new ApiResponse(201, application, 'Application submitted'));

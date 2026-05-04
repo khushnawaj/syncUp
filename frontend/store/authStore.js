@@ -55,4 +55,11 @@ export const useAuthStore = create((set) => ({
     set({ user: null, token: null, isAuthenticated: false });
     window.location.href = '/login';
   },
+
+  updateUser: (userData) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('user', JSON.stringify(userData));
+    }
+    set({ user: userData });
+  },
 }));

@@ -106,7 +106,7 @@ app.use('/api/applications', apiLimiter, applicationRoutes);
 app.use('/api/upload', apiLimiter, uploadRoutes);
 app.use('/api/notifications', apiLimiter, notificationRoutes);
 
-// Health check — used by AWS ELB/ALB and monitoring tools
+// Health check — used by Render and monitoring tools
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
@@ -134,7 +134,7 @@ server.listen(PORT, () => {
   `);
 });
 
-// Graceful shutdown — closes DB connections cleanly on SIGTERM (EC2/Docker)
+// Graceful shutdown — closes DB connections cleanly on SIGTERM (Render/Docker)
 const prisma = require('./src/config/db');
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received — shutting down gracefully');

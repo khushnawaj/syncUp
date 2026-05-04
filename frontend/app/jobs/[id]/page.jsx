@@ -35,23 +35,36 @@ export default function JobDetailPage() {
     if (!isAuthenticated) { router.push('/login'); return; }
     setApplying(true);
     try {
-      // Use FormData for file upload
-      const formData = new FormData();
-      formData.append('coverLetter', coverLetter);
+      let finalResumeUrl = '';
+
       if (resumeFile) {
-        formData.append('resume', resumeFile);
-      } else {
-        formData.append('resumeText', resumeText);
+        // 1. Get presigned URL from backend
+        const { data: presignData } = await api.post('/upload/presign', { 
+          fileType: resumeFile.type 
+        });
+        const { presignedUrl, publicUrl } = presignData.data;
+
+        // 2. Upload directly to S3
+        await fetch(presignedUrl, {
+          method: 'PUT',
+          body: resumeFile,
+          headers: { 'Content-Type': resumeFile.type }
+        });
+        finalResumeUrl = publicUrl;
       }
 
-      await api.post(`/applications/jobs/${id}/apply`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+      // 3. Submit application with the URL
+      await api.post(`/applications/jobs/${id}/apply`, {
+        coverLetter,
+        resumeUrl: finalResumeUrl,
+        resumeText: resumeText || ''
       });
       
       setApplied(true);
       setShowApply(false);
       toast.success('Application submitted! AI matching complete.');
     } catch (err) {
+      console.error('Apply Error:', err);
       toast.error(err?.response?.data?.message || 'Application failed');
     } finally {
       setApplying(false);
@@ -97,7 +110,7 @@ export default function JobDetailPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-sm font-bold mb-1">{job.title}</h1>
+              <h1 className="text-3xl font-bold mb-1">{job.title}</h1>
               <p className="text-slate-500 text-sm">{job.employer.name}</p>
             </div>
             <div className="shrink-0 flex gap-2">
@@ -146,8 +159,8 @@ export default function JobDetailPage() {
 
           {/* Description */}
           <div className="prose max-w-none">
-            <h2 className="text-sm font-semibold mb-3">Job Description</h2>
-            <div className="text-slate-700 leading-relaxed whitespace-pre-line text-sm">
+            <h2 className="text-xl font-semibold mb-3">Job Description</h2>
+            <div className="text-slate-700 leading-relaxed whitespace-pre-line text-base">
               {job.description}
             </div>
           </div>
@@ -156,7 +169,7 @@ export default function JobDetailPage() {
         {/* Apply panel */}
         {showApply && (
           <div className="glass p-5 fade-up">
-            <h3 className="font-semibold text-sm mb-4">Your Application</h3>
+            <h3 className="font-semibold text-xl mb-4">Your Application</h3>
             <div className="mb-4">
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Upload Resume <span className="text-violet-600">(PDF or DOCX)</span>

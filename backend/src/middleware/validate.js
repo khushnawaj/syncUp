@@ -56,6 +56,8 @@ const createJobSchema = z.object({
 
 const applyJobSchema = z.object({
   coverLetter: z.string().max(2000).optional(),
+  resumeUrl: z.string().url().optional(),
+  resumeText: z.string().optional(),
 });
 
 const updateStatusSchema = z.object({

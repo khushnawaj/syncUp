@@ -5,11 +5,8 @@ const {
 const { authenticate, authorize } = require('../middleware/auth');
 const { validate, applyJobSchema, updateStatusSchema } = require('../middleware/validate');
 
-const multer = require('multer');
-const upload = multer({ storage: multer.memoryStorage() });
-
 // Seeker: apply to a job
-router.post('/jobs/:jobId/apply', authenticate, authorize('JOB_SEEKER'), upload.single('resume'), validate(applyJobSchema), applyToJob);
+router.post('/jobs/:jobId/apply', authenticate, authorize('JOB_SEEKER'), validate(applyJobSchema), applyToJob);
 
 // Seeker: view my applications
 router.get('/my', authenticate, authorize('JOB_SEEKER'), getMyApplications);

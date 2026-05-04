@@ -12,13 +12,13 @@ export default function HomePage() {
         <div className="inline-flex items-center gap-2 badge badge-purple mb-6 fade-up">
           <Zap size={12} /> AI-Powered Job Matching
         </div>
-        <h1 className="text-sm sm:text-sm md:text-sm font-bold tracking-tight mb-6 fade-up leading-tight">
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight mb-6 fade-up leading-tight">
           Find Jobs That{' '}
           <span className="bg-gradient-to-r from-violet-400 to-violet-600 bg-clip-text text-transparent">
             Match Your Skills
           </span>
         </h1>
-        <p className="text-sm text-slate-500 max-w-2xl mx-auto mb-10 fade-up">
+        <p className="text-lg text-slate-500 max-w-2xl mx-auto mb-10 fade-up">
           SyncUp uses AI to score your resume against job descriptions, giving employers instant
           insight and giving you a genuine edge in the hiring process.
         </p>
@@ -52,7 +52,7 @@ export default function HomePage() {
 
       {/* Features */}
       <section className="max-w-5xl mx-auto px-4 pb-32">
-        <h2 className="text-sm font-bold text-center mb-12">Why SyncUp?</h2>
+        <h2 className="text-3xl font-bold text-center mb-12">Why SyncUp?</h2>
         <div className="grid md:grid-cols-3 gap-5">
           {[
             {
@@ -75,8 +75,8 @@ export default function HomePage() {
               <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center mb-4 group-hover:bg-violet-500/20 transition-colors">
                 {f.icon}
               </div>
-              <h3 className="font-semibold text-sm mb-2">{f.title}</h3>
-              <p className="text-slate-500 text-sm leading-relaxed">{f.desc}</p>
+              <h3 className="font-semibold text-lg mb-2">{f.title}</h3>
+              <p className="text-slate-500 text-base leading-relaxed">{f.desc}</p>
             </div>
           ))}
         </div>
