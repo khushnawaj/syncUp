@@ -148,6 +148,16 @@ const applyToJob = async ({ jobId, applicantId, coverLetter, resumeText, resumeU
 
       console.log(`Application ${application.id} scored: ${score}%`);
 
+      // Persist notification to DB so it shows in the Notifications tab
+      await prisma.notification.create({
+        data: {
+          userId: job.employerId,
+          type: 'NEW_APPLICATION',
+          message: `New candidate for "${job.title}" — ${score}% match!`,
+          metadata: { applicationId: application.id, jobId, score },
+        },
+      });
+
       // Notify employer via WebSocket
       const io = getIO();
       if (io) {

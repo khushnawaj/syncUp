@@ -18,7 +18,15 @@ export const getSocket = () => {
 
 export const connectSocket = () => {
   const s = getSocket();
-  if (!s.connected) s.connect();
+  if (s.connected) return;
+
+  // Crucial: Update the token from localStorage before connecting
+  // This handles the case where the socket was initialized before the user logged in.
+  const token = localStorage.getItem('token');
+  if (token) {
+    s.auth.token = token;
+    s.connect();
+  }
 };
 
 export const disconnectSocket = () => {

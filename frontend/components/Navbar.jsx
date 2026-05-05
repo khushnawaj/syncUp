@@ -14,18 +14,41 @@ export default function Navbar() {
   useEffect(() => { hydrate(); }, [hydrate]);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) {
+      setUnread(0);
+      return;
+    }
 
+    // 1. Initial fetch for unread count
+    import('@/lib/api').then(({ default: api }) => {
+      api.get('/notifications').then(({ data }) => {
+        const unreadList = data.data.filter((n) => !n.isRead);
+        setUnread(unreadList.length);
+      }).catch(err => console.error('Failed to fetch notifications:', err));
+    });
+
+    // 2. Setup real-time listeners
     connectSocket();
     const socket = getSocket();
 
-    socket.on('notification:new', (data) => {
+    const handleNewNotification = (data) => {
       setUnread((n) => n + 1);
-      toast(data.message, { icon: '🔔' });
-    });
+      toast(data.message, { 
+        icon: '🔔',
+        duration: 5000,
+        style: {
+          borderRadius: '12px',
+          background: '#fff',
+          color: '#1e293b',
+          border: '1px solid rgba(139, 92, 246, 0.2)',
+        },
+      });
+    };
+
+    socket.on('notification:new', handleNewNotification);
 
     return () => {
-      socket.off('notification:new');
+      socket.off('notification:new', handleNewNotification);
       disconnectSocket();
     };
   }, [isAuthenticated]);
